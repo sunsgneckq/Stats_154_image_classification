@@ -1,0 +1,607 @@
+---
+title: "Stats 154 Project 2"
+output: html_document
+---
+
+```{r setup, include=FALSE, message = FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("ggplot2")
+library("glmnet")
+library("MASS")
+library("dplyr")
+library("gridExtra")
+library("grid")
+library("randomForest")
+library("corrplot")
+library("plot.matrix")
+library("cowplot")
+library("caret")
+library("nnet")
+library('e1071')
+library("ROCR")
+library("precrec")
+library("PRROC")
+library("pROC")
+library("rpart")
+library("InformationValue")
+library("rpart.plot")
+library("rattle")
+library("RColorBrewer")
+library("fastAdaboost")
+```
+
+```{r}
+# read in the data and rename the column name to align with cloud data in the data dictionaries
+image1<- as.data.frame(read.table("image_data/image1.txt"))
+image1$picture<- rep("image1", nrow(image1))
+colnames(image1) [1:11] <- c("y_coordinate", "x_coordinate", "label", "NDAI", "SD", "CORR", "DF_angle", "CF_angle" , "BF_angle", "AF_angle", "AN_angle")
+
+image2<- as.data.frame(read.table("image_data/image2.txt"))
+image2$picture<- rep("image2", nrow(image2))
+colnames(image2) [1:11] <- c("y_coordinate", "x_coordinate", "label", "NDAI", "SD", "CORR", "DF_angle", "CF_angle" , "BF_angle", "AF_angle", "AN_angle")
+
+image3<- as.data.frame(read.table("image_data/image3.txt"))
+image3$picture<- rep("image3", nrow(image3))
+colnames(image3) [1:11] <- c("y_coordinate", "x_coordinate", "label", "NDAI", "SD", "CORR", "DF_angle", "CF_angle" , "BF_angle", "AF_angle", "AN_angle")
+```
+
+### Problem 1b Summarize Data
+```{r}
+total_df <- rbind(image1, image2, image3)
+
+ggplot(image1)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate, 
+                                            color = factor(label)))+
+  xlab(" x coordinate") +
+  ylab(" y coordinate") +
+  ggtitle("Coordinate Map image1 with label ")+ 
+  theme_bw()
+ 
+ggplot(image2)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate,
+                                            color = factor(label)))+
+  xlab(" x coordinate") +
+  ylab(" y coordinate") + 
+  ggtitle("Coordinate Map image2 with label ")+ 
+  theme_bw()
+
+ggplot(image3)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate, 
+                                            color = factor(label)))+
+  xlab(" x coordinate") + 
+  ylab(" y coordinate") +
+  ggtitle("Coordinate Map image3 with label ")+ 
+  theme_bw()
+```
+
+```{r}
+#Check if there's any missing data
+sum(is.na(total_df))
+#There is no missing value 
+summary(total_df)
+#Calculate the proportion 
+percentage_label<- total_df %>%
+  group_by(picture, label) %>%
+  summarise (n = n()) %>%
+  mutate(freq = n / sum(n))
+percentage_label
+```
+ 
+ 
+```{r}
+g1 <- ggplot(data=percentage_label[percentage_label$picture=='image1',], 
+  aes(x=label, y=freq)) +
+  geom_bar(stat="identity", color="black", fill="lightskyblue3")+
+  ylab("Proportion")+
+  ylim(0,0.6)
+g2 <- ggplot(data=percentage_label[percentage_label$picture=='image2',], 
+  aes(x=label, y=freq)) +
+  geom_bar(stat="identity", color="black", fill="lightskyblue3")+
+  ylab(NULL)+
+  ylim(0,0.6)
+g3 <- ggplot(data=percentage_label[percentage_label$picture=='image3',], 
+  aes(x=label, y=freq)) +
+  geom_bar(stat="identity", color="black", fill="lightskyblue3")+
+  ylab(NULL)+
+  ylim(0,0.6)
+grid.arrange(g1,g2,g3,ncol=3,top = textGrob("Proportion of label in each image",
+                                            gp = gpar(fontsize = 16))) 
+```
+
+
+### Problem 1c EDA
+```{r}
+labels<- factor(total_df$label)
+cor(total_df[,c(-12)])
+corrplot.mixed(cor(total_df[,c(-3, -12)]))
+  
+G<- ggplot(total_df)+geom_density(aes(x= NDAI, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+  ggtitle("Overlaying histogram of NDAI based on labels")+
+  theme_minimal()
+ 
+H<- ggplot(total_df)+geom_density(aes(x= log(SD), group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+  ggtitle("Overlaying histogram of Log SD based on labels")+
+  theme_minimal()
+
+I<- ggplot(total_df)+geom_density(aes(x= CORR, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+  ggtitle("Overlaying histogram of CORR based on labels")+
+  theme_minimal()
+
+A<- ggplot(total_df)+geom_density(aes(x= DF_angle, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+  ggtitle("Overlaying histogram of DF_angle based on labels")+
+  theme_minimal()
+
+B<- ggplot(total_df)+geom_density(aes(x= CF_angle, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+  ggtitle("Overlaying histogram of CF_angle based on labels")+
+  theme_minimal()
+
+C<- ggplot(total_df)+geom_density(aes(x= BF_angle, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+  ggtitle("Overlaying histogram of BF_angle based on labels")+
+  theme_minimal()
+
+D<-ggplot(total_df)+geom_density(aes(x= AF_angle, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+  ggtitle("Overlaying histogram of AF_angle based on labels")+
+  theme_minimal()
+
+E<- ggplot(total_df)+geom_density(aes(x= AN_angle, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+  ggtitle("Overlaying histogram of AN_angle based on labels")+
+  theme_minimal()
+
+plot_grid(B,C,D,E,nrow=2, align="h")
+plot_grid(A,G,H,I,nrow=2, align="h")
+```
+
+### Problem 2a Data Split
+```{r}
+image1<- image1 %>% filter(label !=0)
+image2<- image2 %>% filter(label !=0)
+image3<- image3 %>% filter(label !=0)
+```
+
+```{r, results='hide'}
+traintest_split<- function(data){
+  res<-list()
+  trainIndex <- createDataPartition(data$label, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+  res$train<- data[ trainIndex,]
+  res$test<-  data[-trainIndex,]
+  return(res)
+}
+trainval_split<- function(data){
+  res<-list()
+  valIndex <- createDataPartition(data$label, p = .2, 
+                                  list = FALSE, 
+                                  times = 1)
+  res$val<- data[ valIndex,]
+  res$train<-  data[-valIndex,]
+  return(res)
+}
+
+##image 1
+#Test-train split
+train1_label_split1<- traintest_split(image1)$train
+# get test from train-test split
+test_label_split1<- traintest_split(image1)$test
+
+#Train-val split ---get val
+val_label_split1<- trainval_split(train1_label_split1)$val
+#Get train
+train_label_split1<-trainval_split(train1_label_split1)$train
+
+##image 2
+train2_label_split2<- traintest_split(image2)$train
+# get test from train-test split
+test_label_split2<- traintest_split(image2)$test
+#Train-val split ---get val
+val_label_split2<- trainval_split(train2_label_split2)$val
+#Get train
+train_label_split2<-trainval_split(train2_label_split2)$train
+
+##image 3
+train3_label_split3<- traintest_split(image3)$train
+# get test from train-test split
+test_label_split3<- traintest_split(image3)$test
+
+#Train-val split ---get val
+val_label_split3<- trainval_split(train3_label_split3)$val
+#Get train
+train_label_split3<-trainval_split(train3_label_split3)$train
+
+method1_train<-rbind(train_label_split1,train_label_split2,train_label_split3)
+method1_val<-rbind(val_label_split1,val_label_split2,val_label_split3)
+method1_test<- rbind(test_label_split1,test_label_split2,test_label_split3)
+method1_train_val<-rbind(method1_train,method1_val)
+method1_train_val$label<-factor(method1_train_val$label)
+```
+
+```{r, results='hide'}
+#Check Duplicates
+image1 %>% distinct()
+grid_row <- 10
+grid_col <- 10
+datasplit<- function(grid_row, grid_col, image){
+  ret <- list()
+  train_data <- data.frame()
+  val_data <- data.frame()
+  test_data <- data.frame()
+  min_y_cor <- min(image$y_coordinate)
+  min_x_cor <- min(image$x_coordinate)
+  max_y_cor <- max(image$y_coordinate)
+  max_x_cor <- max(image$x_coordinate)
+  divide_row <- seq(min_y_cor,max_y_cor+1,(max_y_cor+1-min_y_cor)/(grid_row-1))
+  divide_col <- seq(min_x_cor,max_x_cor+1,(max_x_cor+1-min_x_cor)/(grid_col-1))
+  for (i in 1:length(divide_row)){
+    for (j in 1:length(divide_col)){
+      chunk <- image[image$y_coordinate>=divide_row[i] & image$y_coordinate<divide_row[i+1] & 
+                       image$x_coordinate>=divide_col[j] & image$x_coordinate<divide_col[j+1], ]
+      test_and_val <- floor(nrow(chunk)*0.4)
+      test_and_val_ind <- sample(seq_len(nrow(chunk)), size = test_and_val)
+      val_size <- floor(test_and_val/2)
+      val_ind_ind <- sample(length(test_and_val_ind), size = val_size)
+      val_ind <- test_and_val_ind[val_ind_ind]
+      test_ind <- test_and_val_ind[-val_ind_ind]
+      test<- chunk[test_ind, ]
+      val<- chunk[val_ind, ]
+      train<- chunk[-test_and_val_ind, ]
+      train_data = rbind(train_data,train)
+      test_data = rbind(test_data,test)
+      val_data = rbind(val_data,val)
+    }
+  }
+  ret$training <- train_data
+  ret$validation <- val_data
+  ret$test <- test_data
+  return(ret)
+}
+
+split_result_1 <- datasplit(10,10,image1)
+split_result_2 <- datasplit(10,10,image2)
+split_result_3 <- datasplit(10,10,image3)
+train_total<- rbind(split_result_1$training,split_result_2$training,split_result_3$training)
+val_total<- rbind(split_result_1$validation,split_result_2$validation,split_result_3$validation)
+test_total<- rbind(split_result_1$test,split_result_2$test,split_result_3$test)
+train_total$picture<- NULL
+val_total$picture<- NULL
+test_total$picture<-NULL
+train_total$label<-factor(train_total$label)
+```
+
+### Problem 2b Baseline
+```{r}
+test_trivial<- test_total
+test_trivial$label<--1
+train_trivial<- train_total
+train_trivial$label<--1
+val_trivial<- val_total
+val_trivial$label<--1
+sum(test_trivial$label ==test_total$label)/length(test_total$label)
+sum(val_trivial$label ==val_total$label)/length(val_trivial$label)
+sum(train_trivial$label ==train_total$label)/length(train_trivial$label)
+```
+
+### Problem 2c First Order Importance
+```{r}
+train_val<- rbind(train_total, val_total)
+train_val$label<- as.factor(train_val$label)
+test_total$label<- as.factor(test_total$label)
+#visual
+A<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= y_coordinate, color= factor(label)))+ theme_bw()+ ggtitle("y_coordinate and label")+
+  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))+
+  theme(legend.position="none")
+B<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= x_coordinate,color= factor(label)))+ theme_bw()+ ggtitle("x_coordinate and label")+theme(legend.position="none")+
+  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+C<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= NDAI,color= factor(label)))+ theme_bw()+ 
+  ggtitle("label and NDAI")+theme(legend.position="none")+
+  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+D<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= SD,color= factor(label)))+ theme_bw()+ 
+  ggtitle("label and SD")+theme(legend.position="none")+
+  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+E<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= CORR,color= factor(label)))+ theme_bw()+ 
+  ggtitle("label and CORR")+theme(legend.position="none")+
+  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+G<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= DF_angle,color= factor(label)))+ theme_bw()+ theme(legend.position="none")+
+  ggtitle("label and DF_angle")+
+  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+
+H<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= CF_angle,color= factor(label)))+ theme_bw()+ theme(legend.position="none")+
+  ggtitle("label and CF_angle")+
+  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+I<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= BF_angle,color= factor(label)))+ theme_bw()+ theme(legend.position="none")+
+  ggtitle("label and BF_angle")+
+  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+J<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= AF_angle,color= factor(label)))+ theme_bw()+ theme(legend.position="none")+
+  ggtitle("label and AF_angle")+
+  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+K<-I<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= AN_angle,color= factor(label)))+ theme_bw()+ 
+  ggtitle("label and AN_angle")+theme(legend.position="none")+
+  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+ 
+plot_grid(A, B,C,D,E,G,H,I,J,K,nrow=3, align="h")
+```
+
+```{r}
+#quantitative
+summary(lm(as.numeric(label)~NDAI, data = train_val))$r.squared
+summary(lm(as.numeric(label)~CORR, data = train_val))$r.squared
+summary(lm(as.numeric(label)~AF_angle, data = train_val))$r.squared
+summary(lm(as.numeric(label)~x_coordinate, data = train_val))$r.squared
+summary(lm(as.numeric(label)~y_coordinate, data = train_val))$r.squared
+summary(lm(as.numeric(label)~SD, data = train_val))$r.squared
+summary(lm(as.numeric(label)~DF_angle, data = train_val))$r.squared
+summary(lm(as.numeric(label)~CF_angle, data = train_val))$r.squared
+summary(lm(as.numeric(label)~AN_angle, data = train_val))$r.squared
+```
+ 
+
+### Problem 3a  
+
+#### Model 1: Logistic Regression
+```{r}
+library("dvmisc")
+#logistic regression
+seed = 123
+K = 5
+source("CVgeneric.R")
+cv_result <- CVgeneric("logistic", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=train_val, loss= accuracy, seed)
+set.seed(cv_result$seed)
+cv_result_method_2 <- CVgeneric("logistic", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=method1_train_val, loss= accuracy, seed)
+
+set.seed(cv_result$seed)
+
+#folds = createFolds(train_val[,labels], k = cv_result$num_of_folds)
+train_data = train_val[-cv_result$index, ]
+logistic_model<- train(label ~ .,  data=train_data, method="glm", family="binomial")
+
+#test accuracy
+predicted.classes <- logistic_model %>% predict(test_total[,-3])
+mean(predicted.classes == test_total$label)
+
+# After inspecting the model importance, we take out the x and y coordinate and fit the logistic model again 
+predictions<- data.frame(predict(logistic_model, newdata =test_total[,-3],
+                                 type= "prob" ))
+colnames(predictions) <- c(-1,1)
+pred <- prediction(predictions$`1`, test_total$label)
+perf <- performance(pred, "acc")
+plot(perf, avg= "vertical", spread.estimate="boxplot",
+     show.spread.at= seq(0.1, 0.9, by=0.1), 
+     main="Logistic regression cutoff and performance tradeoff")
+# The label 1 takes 40%, now I have the data set....
+index<-which.max(slot(perf, "y.values")[[1]])
+max<-slot(perf, "x.values")[[1]][index]
+
+perf <- performance(pred, "tpr", "fpr")
+plot(perf, colorize=T, print.cutoffs.at=c(max),
+     text.adj=c(1.5,0.2),
+     avg="threshold", lwd=3,
+     main= "Roc curve for logistic regression")
+abline(a=0,b=1)
+```
+
+#### Model 2: Decision Tree
+```{r}
+method1_train_val$picture<-NULL
+# Load CART packages
+seed = 123
+K = 5
+cv_result_decision_tree <- CVgeneric("decision tree", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=train_val, loss= accuracy, seed)
+ 
+train_data = train_val[-cv_result_decision_tree$index, ]
+
+tree = rpart(label ~ ., data=train_data,maxdepth =10, minsplit= 10)
+tree.pred = predict(tree, newdata=test_total[,-3],method = 'response')
+tree.pred2 = predict(tree, newdata=test_total[,-3],type = 'class')
+
+mean(tree.pred2==test_total$label)
+fancyRpartPlot(tree)
+
+predictions<- data.frame(predict(tree, newdata =test_total[,-3], type= "prob" ))
+colnames(predictions) <- c(-1,1)
+
+pred <- prediction(predictions$`1`, test_total$label)
+perf <- performance(pred, "acc")
+plot(perf, avg= "vertical", spread.estimate="boxplot", 
+     show.spread.at= seq(0.1, 0.9, by=0.1), 
+     main="Decision Tree cutoff and performance tradeoff")
+ 
+index<-which.max(slot(perf, "y.values")[[1]])
+max<-slot(perf, "x.values")[[1]][index]
+perf <- performance(pred, "tpr", "fpr")
+plot(perf, colorize=T, print.cutoffs.at=max, text.adj=c(1,0), avg="threshold", 
+     lwd=3, 
+     main= "Roc curve for Decision Tree")
+abline(a=0,b=1)
+tree_importance<-as.data.frame(varImp(tree))
+tree_importance$importance<-rownames(tree_importance)
+tree_importance <- tree_importance %>% arrange(desc(Overall))
+
+#CV method 2
+cv_result_decision_tree_method2 <- CVgeneric("decision tree", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=method1_train_val, loss= accuracy, seed)
+train_data_tree_2 = method1_train_val[-cv_result_decision_tree_method2$index, ]
+tree2 = rpart(label ~ ., data=train_data_tree_2,maxdepth =10, minsplit= 10)
+tree.pred_method_2 <- predict(tree2, newdata=test_total[,-3],type = 'class')
+
+```
+
+
+#### Model 3:Random Forest
+```{r}
+seed = 123
+K = 5
+#CV method 1
+cv_result_rf <- CVgeneric("random forest", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=train_val, loss= accuracy, seed)
+train_data_rf = train_val[-cv_result_rf$index, ]
+
+#Choose the best hyperparameter of ntry which is the  Number of variables randomly sampled as candidates at each split.
+Random_forest_hyperparameter_tune<-tuneRF(x =train_data[,-3],
+              y = as.factor(train_data[,3]),
+              ntreeTry = 50)
+plot(data.frame(Random_forest_hyperparameter_tune)$mtry,
+     data.frame(Random_forest_hyperparameter_tune)$OOBError, 
+     type = "l",ylab="OOBError",xlab="mtry", 
+     main = "Random Forest mtry tune")
+
+#Hyperparameter in R for random Forest
+#ntree: Number of trees to grow.
+
+rf_model <- randomForest(as.factor(label) ~ y_coordinate + x_coordinate +
+                           NDAI + SD + CORR + DF_angle + CF_angle + BF_angle +
+                           AF_angle + AN_angle, data = train_data_rf,
+                         importance = TRUE,
+                         ntree=50,
+                         ntry=6,
+                         maxnodes= 500, 
+                         nodesize = 10)
+predicted.classes_rf <- rf_model %>% predict(test_total[,-3])
+mean(predicted.classes_rf == test_total$label)
+
+predictions<- data.frame(predict(rf_model, newdata =test_total[,-3], type= "prob" ))
+colnames(predictions) <- c(-1,1)
+
+pred <- prediction(predictions$`1`, test_total$label)
+perf <- performance(pred, "acc")
+plot(perf, avg= "vertical", spread.estimate="boxplot", 
+     show.spread.at= seq(0.1, 0.9, by=0.1), 
+     main="Random Foret cutoff and performance tradeoff")
+# The label 1 takes 40%, now I have the data set....
+index<-which.max(slot(perf, "y.values")[[1]])
+max<-slot(perf, "x.values")[[1]][index]
+
+perf <- performance(pred, "tpr", "fpr")
+plot(perf, colorize=T, print.cutoffs.at=c(max), text.adj=c(0.5,0), 
+     avg="threshold", lwd=3, main= "Roc curve for Random Forest")
+abline(a=0,b=1)
+varImp(rf_model)
+
+#CV method 2
+cv_result_rf_method2 <- CVgeneric("random forest", 
+                                  c("y_coordinate", "x_coordinate", "NDAI", "SD", 
+                                    "CORR", "DF_angle", "CF_angle", "BF_angle", 
+                                    "AF_angle", 'AN_angle'), 
+                                  "label", K, data=method1_train_val, 
+                                  loss= accuracy, 
+                                  seed)
+#Print accuracy result
+cv_result_rf_method2
+#train data by using the best training sets
+train_data_rf2 = method1_train_val[-cv_result_rf_method2$index, ]
+
+rf_model_method_2 <- randomForest(as.factor(label) ~ y_coordinate + 
+                                    x_coordinate + NDAI + SD + CORR +
+                                    DF_angle + CF_angle + BF_angle +AF_angle + 
+                                    AN_angle,
+                                  data = train_data_rf2, 
+                                  importance = TRUE,ntree=50,
+                                  ntry=6,maxnodes= 500, nodesize = 10)
+
+predicted.classes_rf_method_2 <- rf_model_method_2 %>% predict(test_total[,-3])
+```
+
+
+
+#### Model 4: LDA
+```{r}
+cv_result_lda<-CVgeneric("lda", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K = 5, train_val, loss = precision, seed)
+cv_result_lda_method_2<-CVgeneric("lda", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K = 5, method1_train_val, loss = precision, seed)
+train_data = train_val[-cv_result_lda$index, ]
+lda.model = lda(factor(label)~., data=train_val)
+lda_pred<-predict(lda.model, newdata=test_total[,-3])
+lda_pre2<-predict(lda.model, newdata=test_total[,-3], type=  "prob")
+mean(lda_pred$class == test_total$label)
+predictions<- data.frame(predict(lda.model, newdata =test_total[,-3] ))
+colnames(predictions) <- c("label",-1,1)
+
+pred <- prediction(predictions$`1`, test_total$label)
+perf <- performance(pred, "acc")
+plot(perf, avg= "vertical", spread.estimate="boxplot", show.spread.at= seq(0.1, 0.9, by=0.1), main="LDA cutoff and performance tradeoff")
+# The label 1 takes 40%, now I have the data set....
+index<-which.max(slot(perf, "y.values")[[1]])
+max<-slot(perf, "x.values")[[1]][index]
+
+perf <- performance(pred, "tpr", "fpr")
+plot(perf, colorize=T, print.cutoffs.at=c(max), text.adj=c(1,0), avg="threshold", lwd=3, main= "LDA curve for ROC")
+abline(a=0,b=1)
+```
+
+
+### Problem 4 Diagnostics
+
+#### 4a
+```{r}
+#Even though decision tree does not give the best train/test accuracy, it's a good method of classification due to its clearity in procudure. 
+
+#Even though the cross-validation accuracy showed that the there is no overfitting in the training set, we show the concept of tree prune here which is a method used in decisino tree to balance the cost complexity and model outcome. 
+#We can prune the tree using a cost complexity prune of 0.02
+ggplot(data=tree_importance, aes(x=reorder(importance, -Overall), y=Overall)) +
+  geom_bar(stat="identity", color="black", fill="lightgreen")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  xlab("features")+
+  ylab("importance")+
+  ggtitle("Feature importance in Decision Tree")
+
+
+fit <- rpart(label~.,
+   method="anova", data=train_val)
+printcp(fit) # display the results 
+plotcp(fit)
+summary(fit) 
+rsq.rpart(fit)
+
+```
+
+
+#### Diagnostics 4b 
+```{r}
+#refer section 4d
+```
+
+####  Diagnostics 4c AdaBoost 
+```{r}
+library("adabag")
+adaboost<- adaboost(label~y_coordinate + x_coordinate  + NDAI + SD + CORR + DF_angle + CF_angle+ BF_angle + AF_angle + AN_angle ,data=train_val, nIter=10)
+predictions<- data.frame(predict(adaboost, newdata =test_total[,-3] )$prob)
+colnames(predictions) <- c(-1,1)
+mean(predict(adaboost, newdata =test_total[,-3] )$class == test_total$label)
+pred <- prediction(predictions$`1`, test_total$label)
+perf <- performance(pred, "acc")
+plot(perf, avg= "vertical", spread.estimate="boxplot", show.spread.at= seq(0.1, 0.9, by=0.1), main="Adaboosting cutoff and performance tradeoff")
+# The label 1 takes 40%, now I have the data set....
+index<-which.max(slot(perf, "y.values")[[1]])
+max<-slot(perf, "x.values")[[1]][index]
+ 
+perf <- performance(pred, "tpr", "fpr")
+plot(perf, colorize=T, print.cutoffs.at=c(max), text.adj=c(0.3,0), avg="threshold", lwd=3, main= "Adaboosting curve for ROC")
+abline(a=0,b=1)
+```
+
+#### Diagnostics 4d
+```{r}
+#Misclassification pattern for random forest 
+mis_label_random_forest<- train_data_rf[predicted.classes_rf!=test_total$label,]
+ggplot(mis_label_random_forest)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate, color = factor(label)))+
+  xlab(" x coordinate") + ylab(" y coordinate") + ggtitle("Mis-classification in random-forest model split method 1 ")+ theme_bw()
+
+Predicted <-predicted.classes_rf
+Actual<- test_total$label
+fourfoldplot(table(Predicted, Actual))
+#Method 2
+mis_label_random_forest<- train_data_rf2[predicted.classes_rf_method_2!=test_total$label,]
+ggplot(mis_label_random_forest)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate, color = factor(label)))+
+  xlab(" x coordinate") + ylab(" y coordinate") + ggtitle("Mis-classification in random-forest model split method 2 ")+ theme_bw()
+ 
+Predicted <-predicted.classes_rf_method_2
+fourfoldplot(table(Predicted, Actual))
+#Misclassification pattern for decision tree
+mis_label_decision_tree<- train_data[tree.pred2!=test_total$label,]
+ggplot(mis_label_decision_tree)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate, color = factor(label)))+
+  xlab(" x coordinate") + ylab(" y coordinate") + ggtitle("Mis-classification in decision tree model split method 1 ")+ theme_bw()
+ 
+Predicted <-tree.pred2
+fourfoldplot(table(Predicted, Actual))
+ 
+#Method 2
+mis_label_decision_tree2<- train_data_tree_2[tree.pred_method_2!=test_total$label,]
+ggplot(mis_label_decision_tree2)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate, color = factor(label)))+
+  xlab(" x coordinate") + ylab(" y coordinate") + ggtitle("Mis-classification in decision tree model split method 2 ")+ theme_bw()
+Predicted <-tree.pred_method_2
+fourfoldplot(table(Predicted, Actual))
+ 
+
+```
