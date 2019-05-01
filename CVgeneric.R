@@ -1,19 +1,25 @@
-#' CVgeneric in R that takes a generic classifier, training features, 
-#' training labels, number of folds K and a loss function (at least 
-#' classiﬁcation accuracy should be there) as inputs and outputs the 
-#' K-fold CV loss on the training set.
-# 
+#' @author Keqin Cao
 #' @param classifier A generic classifier.
 #' @param features Training features.
 #' @param labels Training labels.
 #' @param K The number of folds K.
-#' @param data Input Data Frame
-#' @param loss A loss function.
-#' @param seed Random Seed.
-#' @return The K-fold CV loss on the training set.
-
+#' @param data Input training data frame
+#' @param loss A loss function 
+#' @param seed Random Seed
+#' @return CV loss: The K-fold CV loss on the training set.
+#' @description The CVgeneric in R that takes a generic classifier, training features，
+#' training labels, number of folds K, training data, a loss function, a pre-defined 
+#' seed as inputs and outputs the K-fold CV loss on the training set.
+#' @description There are four generic classifier: logistic regression model, LDA, decision tree
+#' and random forest.
+#' @description There are three loss metrics: Accuracy, recall, and precision. They are defined as seperate functions and called
+#' inside the CV generic function.
 
 # Loss metrics
+#' @param pred predicted label from classifier.
+#' @param actual Test sets true label 
+#' @return loss: A error metric
+
 accuracy <- function(pred, actual){
   return(mean(pred == actual))
 }

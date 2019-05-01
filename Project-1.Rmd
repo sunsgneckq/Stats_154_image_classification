@@ -1,12 +1,18 @@
 ---
-title: "Stats 154 Project 2"
-output: html_document
+title: "STAT154 Project2"
+author: "Keqin Cao"
+date: "5/3/2019"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
-
 ```{r setup, include=FALSE, message = FALSE, warning=FALSE}
+#Load required package
 knitr::opts_chunk$set(echo = TRUE)
 library("ggplot2")
 library("glmnet")
+library("adabag")
 library("MASS")
 library("dplyr")
 library("gridExtra")
@@ -27,6 +33,8 @@ library("InformationValue")
 library("rpart.plot")
 library("rattle")
 library("RColorBrewer")
+library("dvmisc")
+library("MLmetrics")
 library("fastAdaboost")
 ```
 
@@ -150,11 +158,13 @@ plot_grid(A,G,H,I,nrow=2, align="h")
 
 ### Problem 2a Data Split
 ```{r}
+# Filter all the undefined label
 image1<- image1 %>% filter(label !=0)
 image2<- image2 %>% filter(label !=0)
 image3<- image3 %>% filter(label !=0)
 ```
 
+#### Split method 1 By label
 ```{r, results='hide'}
 traintest_split<- function(data){
   res<-list()
@@ -212,6 +222,7 @@ method1_train_val<-rbind(method1_train,method1_val)
 method1_train_val$label<-factor(method1_train_val$label)
 ```
 
+#### Split method 2 By block
 ```{r, results='hide'}
 #Check Duplicates
 image1 %>% distinct()
@@ -278,38 +289,53 @@ sum(train_trivial$label ==train_total$label)/length(train_trivial$label)
 ```
 
 ### Problem 2c First Order Importance
+#### Visualization
 ```{r}
 train_val<- rbind(train_total, val_total)
 train_val$label<- as.factor(train_val$label)
 test_total$label<- as.factor(test_total$label)
-#visual
-A<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= y_coordinate, color= factor(label)))+ theme_bw()+ ggtitle("y_coordinate and label")+
-  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))+
+#visualization by using boxplot
+A<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= y_coordinate, color= factor(label)))+ theme_bw()+ 
+  ggtitle("y_coordinate and label")+xlab("label")+
+  theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))+
   theme(legend.position="none")
-B<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= x_coordinate,color= factor(label)))+ theme_bw()+ ggtitle("x_coordinate and label")+theme(legend.position="none")+
+
+B<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= x_coordinate,color= factor(label)))+ theme_bw()+ 
+  ggtitle("x_coordinate and label")+theme(legend.position="none")+
   xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+
 C<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= NDAI,color= factor(label)))+ theme_bw()+ 
   ggtitle("label and NDAI")+theme(legend.position="none")+
   xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+
 D<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= SD,color= factor(label)))+ theme_bw()+ 
   ggtitle("label and SD")+theme(legend.position="none")+
   xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+
 E<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= CORR,color= factor(label)))+ theme_bw()+ 
   ggtitle("label and CORR")+theme(legend.position="none")+
   xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
-G<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= DF_angle,color= factor(label)))+ theme_bw()+ theme(legend.position="none")+
+
+G<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= DF_angle,color= factor(label)))+ theme_bw()+ 
+  theme(legend.position="none")+
   ggtitle("label and DF_angle")+
   xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
 
-H<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= CF_angle,color= factor(label)))+ theme_bw()+ theme(legend.position="none")+
+H<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= CF_angle,color= factor(label)))+ theme_bw()+
+  theme(legend.position="none")+
   ggtitle("label and CF_angle")+
   xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
-I<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= BF_angle,color= factor(label)))+ theme_bw()+ theme(legend.position="none")+
+
+I<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= BF_angle,color= factor(label)))+ theme_bw()+
+  theme(legend.position="none")+
   ggtitle("label and BF_angle")+
   xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
-J<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= AF_angle,color= factor(label)))+ theme_bw()+ theme(legend.position="none")+
+
+J<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= AF_angle,color= factor(label)))+ theme_bw()+ 
+  theme(legend.position="none")+
   ggtitle("label and AF_angle")+
   xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+
 K<-I<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= AN_angle,color= factor(label)))+ theme_bw()+ 
   ggtitle("label and AN_angle")+theme(legend.position="none")+
   xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
@@ -317,8 +343,8 @@ K<-I<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= AN_angle,color= fac
 plot_grid(A, B,C,D,E,G,H,I,J,K,nrow=3, align="h")
 ```
 
+#### Quantitative
 ```{r}
-#quantitative
 summary(lm(as.numeric(label)~NDAI, data = train_val))$r.squared
 summary(lm(as.numeric(label)~CORR, data = train_val))$r.squared
 summary(lm(as.numeric(label)~AF_angle, data = train_val))$r.squared
@@ -335,26 +361,29 @@ summary(lm(as.numeric(label)~AN_angle, data = train_val))$r.squared
 
 #### Model 1: Logistic Regression
 ```{r}
-library("dvmisc")
-#logistic regression
+# Compute CV loss
 seed = 123
 K = 5
 source("CVgeneric.R")
-cv_result <- CVgeneric("logistic", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=train_val, loss= accuracy, seed)
+cv_result <- CVgeneric("logistic", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label",
+                       K, data=train_val, loss= accuracy, seed)
 set.seed(cv_result$seed)
-cv_result_method_2 <- CVgeneric("logistic", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=method1_train_val, loss= accuracy, seed)
-
-set.seed(cv_result$seed)
-
-#folds = createFolds(train_val[,labels], k = cv_result$num_of_folds)
+cv_result_method_2 <- CVgeneric("logistic", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", 
+                                K, data=method1_train_val, loss= accuracy, seed)
+# Use data based on the best folds
 train_data = train_val[-cv_result$index, ]
+# Train logistic model
 logistic_model<- train(label ~ .,  data=train_data, method="glm", family="binomial")
-
-#test accuracy
+# Test accuracy
 predicted.classes <- logistic_model %>% predict(test_total[,-3])
 mean(predicted.classes == test_total$label)
 
-# After inspecting the model importance, we take out the x and y coordinate and fit the logistic model again 
+# Other error metrics
+# F1 Score
+F1_Score(as.numeric(predicted.classes), as.numeric(test_total$label))
+# Sensitivity
+Sensitivity(as.numeric(predicted.classes), as.numeric(test_total$label))
+# Find the best cut off point
 predictions<- data.frame(predict(logistic_model, newdata =test_total[,-3],
                                  type= "prob" ))
 colnames(predictions) <- c(-1,1)
@@ -363,38 +392,90 @@ perf <- performance(pred, "acc")
 plot(perf, avg= "vertical", spread.estimate="boxplot",
      show.spread.at= seq(0.1, 0.9, by=0.1), 
      main="Logistic regression cutoff and performance tradeoff")
-# The label 1 takes 40%, now I have the data set....
+
 index<-which.max(slot(perf, "y.values")[[1]])
 max<-slot(perf, "x.values")[[1]][index]
 
 perf <- performance(pred, "tpr", "fpr")
+# ROC curve plot
 plot(perf, colorize=T, print.cutoffs.at=c(max),
      text.adj=c(1.5,0.2),
      avg="threshold", lwd=3,
      main= "Roc curve for logistic regression")
 abline(a=0,b=1)
 ```
-
-#### Model 2: Decision Tree
+#### Model 2: LDA
 ```{r}
+# Compute CV loss
+cv_result_lda<-CVgeneric("lda", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label",
+                         K = 5, train_val, loss = precision, seed)
+cv_result_lda_method_2<-CVgeneric("lda", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label",
+                        K = 5, method1_train_val, loss = precision, seed)
+# Use data based on the best folds
+train_data = train_val[-cv_result_lda$index, ]
+# Fit LDA Model
+lda.model = lda(factor(label)~., data=train_val)
+lda_pred<-predict(lda.model, newdata=test_total[,-3])
+lda_pre2<-predict(lda.model, newdata=test_total[,-3], type=  "prob")
+  
+#Other error metrics
+#F1 Score
+F1_Score(as.numeric(lda_pred$class), as.numeric(test_total$label))
+#Sensitivity
+Sensitivity(as.numeric(lda_pred$class), as.numeric(test_total$label))
+#Accuracy of the model
+mean(lda_pred$class == test_total$label)
+# Find the best cut off point
+predictions<- data.frame(predict(lda.model, newdata =test_total[,-3] ))
+colnames(predictions) <- c("label",-1,1)
+pred <- prediction(predictions$`1`, test_total$label)
+perf <- performance(pred, "acc")
+plot(perf, avg= "vertical", spread.estimate="boxplot", show.spread.at= seq(0.1, 0.9, by=0.1), main="LDA cutoff and performance tradeoff")
+ 
+index<-which.max(slot(perf, "y.values")[[1]])
+max<-slot(perf, "x.values")[[1]][index]
+# ROC Curve
+perf <- performance(pred, "tpr", "fpr")
+plot(perf, colorize=T, print.cutoffs.at=c(max), text.adj=c(1,0), avg="threshold", lwd=3, main= "LDA curve for ROC")
+abline(a=0,b=1)
+```
+
+#### Model 3: Decision Tree
+```{r}
+# Delete unused column
 method1_train_val$picture<-NULL
-# Load CART packages
+# Compute CV loss for first method split
 seed = 123
 K = 5
 cv_result_decision_tree <- CVgeneric("decision tree", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=train_val, loss= accuracy, seed)
- 
+# Use data based on the best folds for the first method split
 train_data = train_val[-cv_result_decision_tree$index, ]
 
+# Train the decision tree model
 tree = rpart(label ~ ., data=train_data,maxdepth =10, minsplit= 10)
-tree.pred = predict(tree, newdata=test_total[,-3],method = 'response')
-tree.pred2 = predict(tree, newdata=test_total[,-3],type = 'class')
-
-mean(tree.pred2==test_total$label)
+# Visualize the decision tree
 fancyRpartPlot(tree)
 
+# Train the decision tree model without the geographic features
+tree_no_xy = rpart(label ~ NDAI+SD+CORR+DF_angle+CF_angle+BF_angle+AF_angle+AN_angle , data=train_data,maxdepth =10, minsplit= 10)
+# Visualize the decision tree model without the geographic features
+fancyRpartPlot(tree_no_xy)
+# Accuracy for decision tree model without the geographic features
+tree.pred_no_xy = predict(tree_no_xy, newdata=test_total[,-3],type = 'class')
+mean(tree.pred_no_xy==test_total$label)
+# Accuracy for  decision tree model WITH the geographic features
+tree.pred = predict(tree, newdata=test_total[,-3],method = 'response')
+tree.pred2 = predict(tree, newdata=test_total[,-3],type = 'class')
+mean(tree.pred2==test_total$label)
+#Other error metrics
+#F1 Score
+F1_Score(as.numeric(tree.pred2), as.numeric(test_total$label))
+#Sensitivity
+Sensitivity(as.numeric(tree.pred2), as.numeric(test_total$label))
+
+# Find the best cut off point
 predictions<- data.frame(predict(tree, newdata =test_total[,-3], type= "prob" ))
 colnames(predictions) <- c(-1,1)
-
 pred <- prediction(predictions$`1`, test_total$label)
 perf <- performance(pred, "acc")
 plot(perf, avg= "vertical", spread.estimate="boxplot", 
@@ -404,15 +485,17 @@ plot(perf, avg= "vertical", spread.estimate="boxplot",
 index<-which.max(slot(perf, "y.values")[[1]])
 max<-slot(perf, "x.values")[[1]][index]
 perf <- performance(pred, "tpr", "fpr")
+# ROC Curve
 plot(perf, colorize=T, print.cutoffs.at=max, text.adj=c(1,0), avg="threshold", 
      lwd=3, 
      main= "Roc curve for Decision Tree")
 abline(a=0,b=1)
+# Decision Tree feature importance (4a preparation)
 tree_importance<-as.data.frame(varImp(tree))
 tree_importance$importance<-rownames(tree_importance)
 tree_importance <- tree_importance %>% arrange(desc(Overall))
 
-#CV method 2
+# Compute CV loss for second method data split
 cv_result_decision_tree_method2 <- CVgeneric("decision tree", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=method1_train_val, loss= accuracy, seed)
 train_data_tree_2 = method1_train_val[-cv_result_decision_tree_method2$index, ]
 tree2 = rpart(label ~ ., data=train_data_tree_2,maxdepth =10, minsplit= 10)
@@ -421,18 +504,19 @@ tree.pred_method_2 <- predict(tree2, newdata=test_total[,-3],type = 'class')
 ```
 
 
-#### Model 3:Random Forest
+#### Model 4:Random Forest
 ```{r}
 seed = 123
 K = 5
-#CV method 1
+# Compute CV loss for first method split
 cv_result_rf <- CVgeneric("random forest", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=train_val, loss= accuracy, seed)
+# Use the best folds on the training set
 train_data_rf = train_val[-cv_result_rf$index, ]
-
-#Choose the best hyperparameter of ntry which is the  Number of variables randomly sampled as candidates at each split.
+# Choose the best hyperparameter of ntry which is the Number of variables randomly sampled as candidates at each split.
 Random_forest_hyperparameter_tune<-tuneRF(x =train_data[,-3],
               y = as.factor(train_data[,3]),
               ntreeTry = 50)
+# Plot the ntry
 plot(data.frame(Random_forest_hyperparameter_tune)$mtry,
      data.frame(Random_forest_hyperparameter_tune)$OOBError, 
      type = "l",ylab="OOBError",xlab="mtry", 
@@ -441,6 +525,7 @@ plot(data.frame(Random_forest_hyperparameter_tune)$mtry,
 #Hyperparameter in R for random Forest
 #ntree: Number of trees to grow.
 
+# Fit the random forest model
 rf_model <- randomForest(as.factor(label) ~ y_coordinate + x_coordinate +
                            NDAI + SD + CORR + DF_angle + CF_angle + BF_angle +
                            AF_angle + AN_angle, data = train_data_rf,
@@ -449,25 +534,32 @@ rf_model <- randomForest(as.factor(label) ~ y_coordinate + x_coordinate +
                          ntry=6,
                          maxnodes= 500, 
                          nodesize = 10)
+# Compute the accuracy of the model
 predicted.classes_rf <- rf_model %>% predict(test_total[,-3])
 mean(predicted.classes_rf == test_total$label)
 
+#Other error metrics
+#F1 Score
+F1_Score(as.numeric(predicted.classes_rf), as.numeric(test_total$label))
+#Sensitivity
+Sensitivity(as.numeric(predicted.classes_rf), as.numeric(test_total$label))
+# Find the best cut off point
 predictions<- data.frame(predict(rf_model, newdata =test_total[,-3], type= "prob" ))
 colnames(predictions) <- c(-1,1)
-
 pred <- prediction(predictions$`1`, test_total$label)
 perf <- performance(pred, "acc")
 plot(perf, avg= "vertical", spread.estimate="boxplot", 
      show.spread.at= seq(0.1, 0.9, by=0.1), 
      main="Random Foret cutoff and performance tradeoff")
-# The label 1 takes 40%, now I have the data set....
+ 
 index<-which.max(slot(perf, "y.values")[[1]])
 max<-slot(perf, "x.values")[[1]][index]
-
 perf <- performance(pred, "tpr", "fpr")
+# ROC curve
 plot(perf, colorize=T, print.cutoffs.at=c(max), text.adj=c(0.5,0), 
      avg="threshold", lwd=3, main= "Roc curve for Random Forest")
 abline(a=0,b=1)
+# Feature importance for random forest model
 varImp(rf_model)
 
 #CV method 2
@@ -479,7 +571,7 @@ cv_result_rf_method2 <- CVgeneric("random forest",
                                   loss= accuracy, 
                                   seed)
 #Print accuracy result
-cv_result_rf_method2
+#cv_result_rf_method2
 #train data by using the best training sets
 train_data_rf2 = method1_train_val[-cv_result_rf_method2$index, ]
 
@@ -496,39 +588,14 @@ predicted.classes_rf_method_2 <- rf_model_method_2 %>% predict(test_total[,-3])
 
 
 
-#### Model 4: LDA
-```{r}
-cv_result_lda<-CVgeneric("lda", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K = 5, train_val, loss = precision, seed)
-cv_result_lda_method_2<-CVgeneric("lda", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K = 5, method1_train_val, loss = precision, seed)
-train_data = train_val[-cv_result_lda$index, ]
-lda.model = lda(factor(label)~., data=train_val)
-lda_pred<-predict(lda.model, newdata=test_total[,-3])
-lda_pre2<-predict(lda.model, newdata=test_total[,-3], type=  "prob")
-mean(lda_pred$class == test_total$label)
-predictions<- data.frame(predict(lda.model, newdata =test_total[,-3] ))
-colnames(predictions) <- c("label",-1,1)
 
-pred <- prediction(predictions$`1`, test_total$label)
-perf <- performance(pred, "acc")
-plot(perf, avg= "vertical", spread.estimate="boxplot", show.spread.at= seq(0.1, 0.9, by=0.1), main="LDA cutoff and performance tradeoff")
-# The label 1 takes 40%, now I have the data set....
-index<-which.max(slot(perf, "y.values")[[1]])
-max<-slot(perf, "x.values")[[1]][index]
-
-perf <- performance(pred, "tpr", "fpr")
-plot(perf, colorize=T, print.cutoffs.at=c(max), text.adj=c(1,0), avg="threshold", lwd=3, main= "LDA curve for ROC")
-abline(a=0,b=1)
-```
 
 
 ### Problem 4 Diagnostics
 
 #### 4a
 ```{r}
-#Even though decision tree does not give the best train/test accuracy, it's a good method of classification due to its clearity in procudure. 
-
-#Even though the cross-validation accuracy showed that the there is no overfitting in the training set, we show the concept of tree prune here which is a method used in decisino tree to balance the cost complexity and model outcome. 
-#We can prune the tree using a cost complexity prune of 0.02
+# Decision Tree feature importance
 ggplot(data=tree_importance, aes(x=reorder(importance, -Overall), y=Overall)) +
   geom_bar(stat="identity", color="black", fill="lightgreen")+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+
@@ -536,7 +603,7 @@ ggplot(data=tree_importance, aes(x=reorder(importance, -Overall), y=Overall)) +
   ylab("importance")+
   ggtitle("Feature importance in Decision Tree")
 
-
+# Balance the cost complexity and error
 fit <- rpart(label~.,
    method="anova", data=train_val)
 printcp(fit) # display the results 
@@ -554,18 +621,41 @@ rsq.rpart(fit)
 
 ####  Diagnostics 4c AdaBoost 
 ```{r}
-library("adabag")
+# Long running time 
+# Fit adaboost model
 adaboost<- adaboost(label~y_coordinate + x_coordinate  + NDAI + SD + CORR + DF_angle + CF_angle+ BF_angle + AF_angle + AN_angle ,data=train_val, nIter=10)
+# Adaboost model Accuracy 
+mean(predict(adaboost, newdata =test_total[,-3] )$class == test_total$label)
+# Fit adaboost model without geographic information 
+adaboost_no_xy<- adaboost(label~NDAI + SD + CORR + DF_angle + CF_angle+ BF_angle + AF_angle + AN_angle ,data=train_val, nIter=10)
+mean(predict(adaboost_no_xy, newdata =test_total[,-3] )$class == test_total$label)
+
+boost_no_xy<- boosting(label~NDAI + SD + CORR + DF_angle + CF_angle+ BF_angle + AF_angle + AN_angle ,data=train_val, mfinal = 100, boos=TRUE)
+
+#Error based on number of trees 
+errorevol(boost_no_xy,train_val[,c(-1,-2)])->evol.train
+errorevol(boost_no_xy,test_total[,c(-1,-2)])->evol.test
+plot.errorevol(evol.train,evol.test)
+plot.errorevol(evol.test,evol.train)
+importanceplot(boost_no_xy)
+# Margins
+BC.margins<-margins(boost_no_xy,train_val[,c(-1,-2)]) # training set
+BC.adaboost.pred <- predict.boosting(boost_no_xy,newdata=test_total[,c(-1,-2)])
+ 
+BC.predmargins<-margins(BC.adaboost.pred,test_total[,c(-1,-2)]) # test set
+plot.margins(BC.predmargins,BC.margins,alpha=0.3 )
+
+# Adaboost model Accuracy without geographic information 
+mean(predict(adaboost_no_xy, newdata =test_total[,-3] )$class == test_total$label)
+# Cut off point selection 
 predictions<- data.frame(predict(adaboost, newdata =test_total[,-3] )$prob)
 colnames(predictions) <- c(-1,1)
-mean(predict(adaboost, newdata =test_total[,-3] )$class == test_total$label)
 pred <- prediction(predictions$`1`, test_total$label)
 perf <- performance(pred, "acc")
 plot(perf, avg= "vertical", spread.estimate="boxplot", show.spread.at= seq(0.1, 0.9, by=0.1), main="Adaboosting cutoff and performance tradeoff")
-# The label 1 takes 40%, now I have the data set....
 index<-which.max(slot(perf, "y.values")[[1]])
 max<-slot(perf, "x.values")[[1]][index]
- 
+# ROC curve
 perf <- performance(pred, "tpr", "fpr")
 plot(perf, colorize=T, print.cutoffs.at=c(max), text.adj=c(0.3,0), avg="threshold", lwd=3, main= "Adaboosting curve for ROC")
 abline(a=0,b=1)
@@ -602,6 +692,4 @@ ggplot(mis_label_decision_tree2)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y
   xlab(" x coordinate") + ylab(" y coordinate") + ggtitle("Mis-classification in decision tree model split method 2 ")+ theme_bw()
 Predicted <-tree.pred_method_2
 fourfoldplot(table(Predicted, Actual))
- 
-
 ```
