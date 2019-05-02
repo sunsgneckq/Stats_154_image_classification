@@ -3,9 +3,9 @@ title: "STAT154 Project2"
 author: "Keqin Cao"
 date: "5/3/2019"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
-  pdf_document: default
 ---
 ```{r setup, include=FALSE, message = FALSE, warning=FALSE}
 #Load required package
