@@ -88,10 +88,15 @@ CVgeneric = function(classifier, features, labels, K, data, loss, seed)
 ```
 ### 3 Models
 There are four models in total, LDA, logistic regression, decision tree and random forest. The default loss function is accuracy. If want to get other model metrics, change the loss function imput to the desired metric. 
+
+Use the code for ROC function to find the optimum cutoff.
+
+Usage
+=====
 ```
 accuracy <- function(pred, actual){
   return(mean(pred == actual))
-}s
+}
 recall <- function(pred, actual){
   tp <- sum(pred==1 & actual == 1)
   fn <- sum(pred == -1 & actual == 1)
@@ -104,19 +109,32 @@ precision <- function(pred, actual){
 }
 
 ```
-Usage
-=====
-```
+### 4a
+Further analysis on decision tree, using the code to generate the diagram for the optimal tree and feature importance 
 
 ```
+fit <- rpart(label~.,
+   method="anova", data=train_val)
+printcp(fit) # display the results 
+plotcp(fit)  # Plot the cost complexity and error trade off
+varImp(tree) # Importance feature
+```
+### 4b
+Visualize misclassification using ggplot.
 
-Use the code for ROC function to find the optimal cutoff
+Visualize confusion matrix
+```
+fourfoldplot(table(Predicted, Actual))
+```
 
-
-
-
-
-
+### 4c
+4c 
+Run the code for a new model adaboost and the same metrics for other four models
+```
+adaboost(label~y_coordinate + x_coordinate  + NDAI + SD + CORR + DF_angle + CF_angle+ BF_angle + AF_angle + AN_angle ,data=training data, nIter=10)
+```
+### 4d
+Scatter Plot for misclassification error on decision tree and random forest for both data splitting method
 
 
 
