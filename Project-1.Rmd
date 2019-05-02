@@ -3,9 +3,9 @@ title: "STAT154 Project2"
 author: "Keqin Cao"
 date: "5/3/2019"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
 ---
 ```{r setup, include=FALSE, message = FALSE, warning=FALSE}
 #Load required package
@@ -42,15 +42,21 @@ library("fastAdaboost")
 # read in the data and rename the column name to align with cloud data in the data dictionaries
 image1<- as.data.frame(read.table("image_data/image1.txt"))
 image1$picture<- rep("image1", nrow(image1))
-colnames(image1) [1:11] <- c("y_coordinate", "x_coordinate", "label", "NDAI", "SD", "CORR", "DF_angle", "CF_angle" , "BF_angle", "AF_angle", "AN_angle")
+colnames(image1) [1:11] <- c("y_coordinate", "x_coordinate", "label", 
+                             "NDAI", "SD", "CORR", "DF_angle", "CF_angle" , 
+                             "BF_angle", "AF_angle", "AN_angle")
 
 image2<- as.data.frame(read.table("image_data/image2.txt"))
 image2$picture<- rep("image2", nrow(image2))
-colnames(image2) [1:11] <- c("y_coordinate", "x_coordinate", "label", "NDAI", "SD", "CORR", "DF_angle", "CF_angle" , "BF_angle", "AF_angle", "AN_angle")
+colnames(image2) [1:11] <- c("y_coordinate", "x_coordinate", "label", 
+                             "NDAI", "SD", "CORR", "DF_angle", 
+                             "CF_angle" , "BF_angle", "AF_angle", "AN_angle")
 
 image3<- as.data.frame(read.table("image_data/image3.txt"))
 image3$picture<- rep("image3", nrow(image3))
-colnames(image3) [1:11] <- c("y_coordinate", "x_coordinate", "label", "NDAI", "SD", "CORR", "DF_angle", "CF_angle" , "BF_angle", "AF_angle", "AN_angle")
+colnames(image3) [1:11] <- c("y_coordinate", "x_coordinate", "label",
+                             "NDAI", "SD", "CORR", "DF_angle", 
+                             "CF_angle" , "BF_angle", "AF_angle", "AN_angle")
 ```
 
 ### Problem 1b Summarize Data
@@ -120,35 +126,51 @@ labels<- factor(total_df$label)
 cor(total_df[,c(-12)])
 corrplot.mixed(cor(total_df[,c(-3, -12)]))
   
-G<- ggplot(total_df)+geom_density(aes(x= NDAI, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+G<- ggplot(total_df)+geom_density(aes(x= NDAI, group= label, 
+                                      color=labels, fill= labels),
+                                  color= "black",alpha = 0.7)+
   ggtitle("Overlaying histogram of NDAI based on labels")+
   theme_minimal()
  
-H<- ggplot(total_df)+geom_density(aes(x= log(SD), group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+H<- ggplot(total_df)+geom_density(aes(x= log(SD), group= label,
+                                      color=labels, fill= labels), 
+                                  color= "black",alpha = 0.7)+
   ggtitle("Overlaying histogram of Log SD based on labels")+
   theme_minimal()
 
-I<- ggplot(total_df)+geom_density(aes(x= CORR, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+I<- ggplot(total_df)+geom_density(aes(x= CORR, group= label, 
+                                      color=labels, fill= labels), 
+                                  color= "black",alpha = 0.7)+
   ggtitle("Overlaying histogram of CORR based on labels")+
   theme_minimal()
 
-A<- ggplot(total_df)+geom_density(aes(x= DF_angle, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+A<- ggplot(total_df)+geom_density(aes(x= DF_angle, group= label, 
+                                      color=labels, fill= labels), 
+                                  color= "black",alpha = 0.7)+
   ggtitle("Overlaying histogram of DF_angle based on labels")+
   theme_minimal()
 
-B<- ggplot(total_df)+geom_density(aes(x= CF_angle, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+B<- ggplot(total_df)+geom_density(aes(x= CF_angle, group= label, 
+                                      color=labels, fill= labels),
+                                  color= "black",alpha = 0.7)+
   ggtitle("Overlaying histogram of CF_angle based on labels")+
   theme_minimal()
 
-C<- ggplot(total_df)+geom_density(aes(x= BF_angle, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+C<- ggplot(total_df)+geom_density(aes(x= BF_angle, group= label, 
+                                      color=labels, fill= labels), 
+                                  color= "black",alpha = 0.7)+
   ggtitle("Overlaying histogram of BF_angle based on labels")+
   theme_minimal()
 
-D<-ggplot(total_df)+geom_density(aes(x= AF_angle, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+D<-ggplot(total_df)+geom_density(aes(x= AF_angle, group= label,
+                                     color=labels, fill= labels),
+                                 color= "black",alpha = 0.7)+
   ggtitle("Overlaying histogram of AF_angle based on labels")+
   theme_minimal()
 
-E<- ggplot(total_df)+geom_density(aes(x= AN_angle, group= label, color=labels, fill= labels), color= "black",alpha = 0.7)+
+E<- ggplot(total_df)+geom_density(aes(x= AN_angle, group= label,
+                                      color=labels, fill= labels), 
+                                  color= "black",alpha = 0.7)+
   ggtitle("Overlaying histogram of AN_angle based on labels")+
   theme_minimal()
 
@@ -295,50 +317,68 @@ train_val<- rbind(train_total, val_total)
 train_val$label<- as.factor(train_val$label)
 test_total$label<- as.factor(test_total$label)
 #visualization by using boxplot
-A<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= y_coordinate, color= factor(label)))+ theme_bw()+ 
+A<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= y_coordinate,
+                                      color= factor(label)))+ theme_bw()+ 
   ggtitle("y_coordinate and label")+xlab("label")+
-  theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))+
+  theme(plot.title = element_text(size = rel(1), 
+                                  vjust = 1.5,face="bold.italic"))+
   theme(legend.position="none")
 
-B<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= x_coordinate,color= factor(label)))+ theme_bw()+ 
+B<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= x_coordinate,
+                                      color= factor(label)))+ theme_bw()+ 
   ggtitle("x_coordinate and label")+theme(legend.position="none")+
-  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+  xlab("label")+theme(plot.title = element_text(size = rel(1), 
+                                                vjust = 1.5,face="bold.italic"))
 
-C<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= NDAI,color= factor(label)))+ theme_bw()+ 
+C<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= NDAI,
+                                      color= factor(label)))+ theme_bw()+ 
   ggtitle("label and NDAI")+theme(legend.position="none")+
-  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+  xlab("label")+theme(plot.title = element_text(size = rel(1),
+                                                vjust = 1.5,face="bold.italic"))
 
 D<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= SD,color= factor(label)))+ theme_bw()+ 
   ggtitle("label and SD")+theme(legend.position="none")+
-  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+  xlab("label")+theme(plot.title = element_text(size = rel(1),
+                                                vjust = 1.5,face="bold.italic"))
 
 E<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= CORR,color= factor(label)))+ theme_bw()+ 
   ggtitle("label and CORR")+theme(legend.position="none")+
-  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+  xlab("label")+theme(plot.title = element_text(size = rel(1),
+                                                vjust = 1.5,face="bold.italic"))
 
-G<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= DF_angle,color= factor(label)))+ theme_bw()+ 
+G<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= DF_angle,
+                                      color= factor(label)))+ theme_bw()+ 
   theme(legend.position="none")+
   ggtitle("label and DF_angle")+
-  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+  xlab("label")+theme(plot.title = element_text(size = rel(1), 
+                                                vjust = 1.5,face="bold.italic"))
 
-H<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= CF_angle,color= factor(label)))+ theme_bw()+
+H<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= CF_angle,
+                                      color= factor(label)))+ theme_bw()+
   theme(legend.position="none")+
   ggtitle("label and CF_angle")+
-  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+  xlab("label")+theme(plot.title = element_text(size = rel(1), 
+                                                vjust = 1.5,face="bold.italic"))
 
-I<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= BF_angle,color= factor(label)))+ theme_bw()+
+I<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= BF_angle,
+                                      color= factor(label)))+ theme_bw()+
   theme(legend.position="none")+
   ggtitle("label and BF_angle")+
-  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+  xlab("label")+theme(plot.title = element_text(size = rel(1), 
+                                                vjust = 1.5,face="bold.italic"))
 
-J<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= AF_angle,color= factor(label)))+ theme_bw()+ 
+J<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= AF_angle,
+                                      color= factor(label)))+ theme_bw()+ 
   theme(legend.position="none")+
   ggtitle("label and AF_angle")+
-  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+  xlab("label")+theme(plot.title = element_text(size = rel(1), 
+                                                vjust = 1.5,face="bold.italic"))
 
-K<-I<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= AN_angle,color= factor(label)))+ theme_bw()+ 
+K<-I<-ggplot(train_val)+geom_boxplot(aes(x=factor(label), y= AN_angle,
+                                         color= factor(label)))+ theme_bw()+ 
   ggtitle("label and AN_angle")+theme(legend.position="none")+
-  xlab("label")+theme(plot.title = element_text(size = rel(1), vjust = 1.5,face="bold.italic"))
+  xlab("label")+theme(plot.title = element_text(size = rel(1),
+                                                vjust = 1.5,face="bold.italic"))
  
 plot_grid(A, B,C,D,E,G,H,I,J,K,nrow=3, align="h")
 ```
@@ -365,10 +405,16 @@ summary(lm(as.numeric(label)~AN_angle, data = train_val))$r.squared
 seed = 123
 K = 5
 source("CVgeneric.R")
-cv_result <- CVgeneric("logistic", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label",
+cv_result <- CVgeneric("logistic", c("y_coordinate", "x_coordinate", 
+                                     "NDAI", "SD", "CORR", "DF_angle", 
+                                     "CF_angle", "BF_angle", "AF_angle", 
+                                     'AN_angle'), "label",
                        K, data=train_val, loss= accuracy, seed)
 set.seed(cv_result$seed)
-cv_result_method_2 <- CVgeneric("logistic", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", 
+cv_result_method_2 <- CVgeneric("logistic", c("y_coordinate", "x_coordinate",
+                                              "NDAI", "SD", "CORR", "DF_angle", 
+                                              "CF_angle", "BF_angle", "AF_angle", 
+                                              'AN_angle'), "label", 
                                 K, data=method1_train_val, loss= accuracy, seed)
 # Use data based on the best folds
 train_data = train_val[-cv_result$index, ]
@@ -407,9 +453,15 @@ abline(a=0,b=1)
 #### Model 2: LDA
 ```{r}
 # Compute CV loss
-cv_result_lda<-CVgeneric("lda", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label",
+cv_result_lda<-CVgeneric("lda", c("y_coordinate", "x_coordinate", 
+                                  "NDAI", "SD", "CORR", "DF_angle", 
+                                  "CF_angle", "BF_angle", "AF_angle", 'AN_angle'),
+                         "label",
                          K = 5, train_val, loss = precision, seed)
-cv_result_lda_method_2<-CVgeneric("lda", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label",
+cv_result_lda_method_2<-CVgeneric("lda", c("y_coordinate", "x_coordinate", 
+                                           "NDAI", "SD", "CORR", "DF_angle",
+                                           "CF_angle", "BF_angle", "AF_angle", 'AN_angle'),
+                        "label",
                         K = 5, method1_train_val, loss = precision, seed)
 # Use data based on the best folds
 train_data = train_val[-cv_result_lda$index, ]
@@ -447,7 +499,8 @@ method1_train_val$picture<-NULL
 # Compute CV loss for first method split
 seed = 123
 K = 5
-cv_result_decision_tree <- CVgeneric("decision tree", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=train_val, loss= accuracy, seed)
+cv_result_decision_tree <- CVgeneric("decision tree", 
+                                     c("y_coordinate",  "x_coordinate",  "NDAI","SD","CORR","DF_angle","CF_angle","BF_angle","AF_angle",'AN_angle'),"label",K,data=train_val,loss= accuracy, seed)
 # Use data based on the best folds for the first method split
 train_data = train_val[-cv_result_decision_tree$index, ]
 
@@ -496,7 +549,13 @@ tree_importance$importance<-rownames(tree_importance)
 tree_importance <- tree_importance %>% arrange(desc(Overall))
 
 # Compute CV loss for second method data split
-cv_result_decision_tree_method2 <- CVgeneric("decision tree", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=method1_train_val, loss= accuracy, seed)
+cv_result_decision_tree_method2 <- CVgeneric("decision tree", 
+                                             c("y_coordinate", "x_coordinate", 
+                                               "NDAI", "SD", "CORR", "DF_angle", 
+                                               "CF_angle", "BF_angle", "AF_angle",
+                                               'AN_angle'), "label",K, 
+                                             data=method1_train_val, 
+                                             loss= accuracy, seed)
 train_data_tree_2 = method1_train_val[-cv_result_decision_tree_method2$index, ]
 tree2 = rpart(label ~ ., data=train_data_tree_2,maxdepth =10, minsplit= 10)
 tree.pred_method_2 <- predict(tree2, newdata=test_total[,-3],type = 'class')
@@ -509,7 +568,13 @@ tree.pred_method_2 <- predict(tree2, newdata=test_total[,-3],type = 'class')
 seed = 123
 K = 5
 # Compute CV loss for first method split
-cv_result_rf <- CVgeneric("random forest", c("y_coordinate", "x_coordinate", "NDAI", "SD", "CORR", "DF_angle", "CF_angle", "BF_angle", "AF_angle", 'AN_angle'), "label", K, data=train_val, loss= accuracy, seed)
+cv_result_rf <- CVgeneric("random forest", c("y_coordinate", 
+                                             "x_coordinate", 
+                                             "NDAI", "SD", "CORR", 
+                                             "DF_angle", "CF_angle", 
+                                             "BF_angle", "AF_angle", 
+                                             'AN_angle'), "label", K, 
+                          data=train_val, loss= accuracy, seed)
 # Use the best folds on the training set
 train_data_rf = train_val[-cv_result_rf$index, ]
 # Choose the best hyperparameter of ntry which is the Number of variables randomly sampled as candidates at each split.
@@ -627,15 +692,11 @@ adaboost<- adaboost(label~y_coordinate + x_coordinate  + NDAI + SD + CORR + DF_a
 # Adaboost model Accuracy 
 mean(predict(adaboost, newdata =test_total[,-3] )$class == test_total$label)
 # Fit adaboost model without geographic information 
-adaboost_no_xy<- adaboost(label~NDAI + SD + CORR + DF_angle + CF_angle+ BF_angle + AF_angle + AN_angle ,data=train_val, nIter=10)
-mean(predict(adaboost_no_xy, newdata =test_total[,-3] )$class == test_total$label)
-
-boost_no_xy<- boosting(label~NDAI + SD + CORR + DF_angle + CF_angle+ BF_angle + AF_angle + AN_angle ,data=train_val, mfinal = 100, boos=TRUE)
+boost_no_xy<- boosting(label~NDAI + SD + CORR + DF_angle + CF_angle+ BF_angle + AF_angle + AN_angle ,data=train_val, mfinal = 10, boos=TRUE)
 
 #Error based on number of trees 
 errorevol(boost_no_xy,train_val[,c(-1,-2)])->evol.train
 errorevol(boost_no_xy,test_total[,c(-1,-2)])->evol.test
-plot.errorevol(evol.train,evol.test)
 plot.errorevol(evol.test,evol.train)
 importanceplot(boost_no_xy)
 # Margins
@@ -646,18 +707,21 @@ BC.predmargins<-margins(BC.adaboost.pred,test_total[,c(-1,-2)]) # test set
 plot.margins(BC.predmargins,BC.margins,alpha=0.3 )
 
 # Adaboost model Accuracy without geographic information 
-mean(predict(adaboost_no_xy, newdata =test_total[,-3] )$class == test_total$label)
+mean(predict(boost_no_xy, newdata =test_total[,-3] )$class == test_total$label)
 # Cut off point selection 
 predictions<- data.frame(predict(adaboost, newdata =test_total[,-3] )$prob)
 colnames(predictions) <- c(-1,1)
 pred <- prediction(predictions$`1`, test_total$label)
 perf <- performance(pred, "acc")
-plot(perf, avg= "vertical", spread.estimate="boxplot", show.spread.at= seq(0.1, 0.9, by=0.1), main="Adaboosting cutoff and performance tradeoff")
+plot(perf, avg= "vertical", spread.estimate="boxplot", 
+     show.spread.at= seq(0.1, 0.9, by=0.1), 
+     main="Adaboosting cutoff and performance tradeoff")
 index<-which.max(slot(perf, "y.values")[[1]])
 max<-slot(perf, "x.values")[[1]][index]
 # ROC curve
 perf <- performance(pred, "tpr", "fpr")
-plot(perf, colorize=T, print.cutoffs.at=c(max), text.adj=c(0.3,0), avg="threshold", lwd=3, main= "Adaboosting curve for ROC")
+plot(perf, colorize=T, print.cutoffs.at=c(max), text.adj=c(0.3,0), 
+     avg="threshold", lwd=3, main= "Adaboosting curve for ROC")
 abline(a=0,b=1)
 ```
 
@@ -665,23 +729,33 @@ abline(a=0,b=1)
 ```{r}
 #Misclassification pattern for random forest 
 mis_label_random_forest<- train_data_rf[predicted.classes_rf!=test_total$label,]
-ggplot(mis_label_random_forest)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate, color = factor(label)))+
-  xlab(" x coordinate") + ylab(" y coordinate") + ggtitle("Mis-classification in random-forest model split method 1 ")+ theme_bw()
+ggplot(mis_label_random_forest)+ geom_point(alpha = 0.5, 
+                                            aes(x= x_coordinate, y = y_coordinate,
+                                                color = factor(label)))+
+  xlab(" x coordinate") + ylab(" y coordinate") + 
+  ggtitle("Mis-classification in random-forest model split method 1 ")+ 
+  theme_bw()
 
 Predicted <-predicted.classes_rf
 Actual<- test_total$label
 fourfoldplot(table(Predicted, Actual))
 #Method 2
 mis_label_random_forest<- train_data_rf2[predicted.classes_rf_method_2!=test_total$label,]
-ggplot(mis_label_random_forest)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate, color = factor(label)))+
-  xlab(" x coordinate") + ylab(" y coordinate") + ggtitle("Mis-classification in random-forest model split method 2 ")+ theme_bw()
+ggplot(mis_label_random_forest)+ geom_point(alpha = 0.5, 
+                                            aes(x= x_coordinate,y = y_coordinate,
+                                                color = factor(label)))+
+  xlab(" x coordinate") + ylab(" y coordinate")+
+  ggtitle("Mis-classification in random-forest model split method 2 ")+theme_bw()
  
 Predicted <-predicted.classes_rf_method_2
 fourfoldplot(table(Predicted, Actual))
 #Misclassification pattern for decision tree
 mis_label_decision_tree<- train_data[tree.pred2!=test_total$label,]
-ggplot(mis_label_decision_tree)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate, color = factor(label)))+
-  xlab(" x coordinate") + ylab(" y coordinate") + ggtitle("Mis-classification in decision tree model split method 1 ")+ theme_bw()
+ggplot(mis_label_decision_tree)+ geom_point(alpha = 0.5, 
+                                            aes(x= x_coordinate, y = y_coordinate,
+                                                color = factor(label)))+
+  xlab(" x coordinate") + ylab(" y coordinate") + 
+  ggtitle("Mis-classification in decision tree model split method 1 ")+ theme_bw()
  
 Predicted <-tree.pred2
 fourfoldplot(table(Predicted, Actual))
@@ -689,7 +763,8 @@ fourfoldplot(table(Predicted, Actual))
 #Method 2
 mis_label_decision_tree2<- train_data_tree_2[tree.pred_method_2!=test_total$label,]
 ggplot(mis_label_decision_tree2)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate, color = factor(label)))+
-  xlab(" x coordinate") + ylab(" y coordinate") + ggtitle("Mis-classification in decision tree model split method 2 ")+ theme_bw()
+  xlab(" x coordinate") + ylab(" y coordinate") + 
+  ggtitle("Mis-classification in decision tree model split method 2 ")+ theme_bw()
 Predicted <-tree.pred_method_2
 fourfoldplot(table(Predicted, Actual))
 ```

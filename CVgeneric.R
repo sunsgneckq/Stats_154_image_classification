@@ -1,4 +1,5 @@
 #' @author Keqin Cao
+#' @title CVgeneric
 #' @param classifier A generic classifier.
 #' @param features Training features.
 #' @param labels Training labels.
