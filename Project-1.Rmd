@@ -728,13 +728,30 @@ abline(a=0,b=1)
 #### Diagnostics 4d
 ```{r}
 #Misclassification pattern for random forest 
-mis_label_random_forest<- train_data_rf[predicted.classes_rf!=test_total$label,]
-ggplot(mis_label_random_forest)+ geom_point(alpha = 0.5, 
-                                            aes(x= x_coordinate, y = y_coordinate,
-                                                color = factor(label)))+
+mis_label_random_forest<-train_data_rf[predicted.classes_rf!=test_total$label,]
+ggplot(mis_label_random_forest)+
+  geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate,
+                              color = factor(label)))+
   xlab(" x coordinate") + ylab(" y coordinate") + 
   ggtitle("Mis-classification in random-forest model split method 1 ")+ 
   theme_bw()
+
+
+ggplot(mis_label_random_forest)+geom_density(aes(x= CORR, group= label, 
+                                      color=label, fill= label), 
+                                  color= "black",alpha = 0.7)+
+  ggtitle("RF Overlaying histogram of CORR split by block")+
+  theme_minimal()
+ggplot(mis_label_random_forest)+geom_density(aes(x= NDAI, group= label, 
+                                      color=label, fill= label), 
+                                  color= "black",alpha = 0.7)+
+  ggtitle("RF Overlaying histogram of NDAI split by block")+
+  theme_minimal()
+ggplot(mis_label_random_forest)+geom_density(aes(x= SD, group= label, 
+                                      color=label, fill= label), 
+                                  color= "black",alpha = 0.7)+
+  ggtitle("RF Overlaying histogram of SD split by block")+
+  theme_minimal()
 
 Predicted <-predicted.classes_rf
 Actual<- test_total$label
@@ -747,6 +764,7 @@ ggplot(mis_label_random_forest)+ geom_point(alpha = 0.5,
   xlab(" x coordinate") + ylab(" y coordinate")+
   ggtitle("Mis-classification in random-forest model split method 2 ")+theme_bw()
  
+
 Predicted <-predicted.classes_rf_method_2
 fourfoldplot(table(Predicted, Actual))
 #Misclassification pattern for decision tree
@@ -759,7 +777,24 @@ ggplot(mis_label_decision_tree)+ geom_point(alpha = 0.5,
  
 Predicted <-tree.pred2
 fourfoldplot(table(Predicted, Actual))
+
+ggplot(mis_label_decision_tree)+geom_density(aes(x= CORR, group= label, 
+                                      color=label, fill= label), 
+                                  color= "red",alpha = 0.7)+
+  ggtitle("DT Overlaying histogram of CORR split by block")+
+  theme_minimal()
+ggplot(mis_label_decision_tree)+geom_density(aes(x= NDAI, group= label, 
+                                      color=label, fill= label), 
+                                  color= "red",alpha = 0.7)+
+  ggtitle("DT Overlaying histogram of NDAI split by block")+
+  theme_minimal()
+ggplot(mis_label_decision_tree)+geom_density(aes(x= SD, group= label, 
+                                      color=label, fill= label), 
+                                  color= "red",alpha = 0.7)+
+  ggtitle("DT Overlaying histogram of SD split by block")+
+  theme_minimal()
  
+
 #Method 2
 mis_label_decision_tree2<- train_data_tree_2[tree.pred_method_2!=test_total$label,]
 ggplot(mis_label_decision_tree2)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate, color = factor(label)))+
@@ -767,4 +802,6 @@ ggplot(mis_label_decision_tree2)+ geom_point(alpha = 0.5, aes(x= x_coordinate, y
   ggtitle("Mis-classification in decision tree model split method 2 ")+ theme_bw()
 Predicted <-tree.pred_method_2
 fourfoldplot(table(Predicted, Actual))
+
+ 
 ```

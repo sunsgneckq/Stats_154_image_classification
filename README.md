@@ -47,6 +47,7 @@ colnames(imageX) [1:11] <- c("y_coordinate", "x_coordinate", "label",
 
 How to generate the report
 ==========================
+### 1a Summary of the study 
 ### 1b Summarize data
 First set of image generated are the maps of labels using x,y coordinates. 
 
@@ -91,8 +92,8 @@ There are four models in total, LDA, logistic regression, decision tree and rand
 
 Use the code for ROC function to find the optimum cutoff.
 
-Usage
-=====
+Usage of error metrics
+======================
 ```
 accuracy <- function(pred, actual){
   return(mean(pred == actual))
@@ -121,9 +122,22 @@ varImp(tree) # Importance feature
 ```
 ### 4b
 Visualize misclassification using ggplot.
-
+```
+mis_label<-train_data_classifier[predicted.classes_classifier!=test_total$label,]
+ggplot(mis_label)+
+  geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate,
+                              color = factor(label)))+
+  xlab(" x coordinate") + ylab(" y coordinate") + 
+  ggtitle("Mis-classification in __ model split")+ 
+  theme_bw()
+```
 Visualize confusion matrix
 ```
+ggplot(df)+
+  geom_point(alpha = 0.5, aes(x= x_coordinate, y = y_coordinate,
+  color = factor(label)))+
+  xlab(" x coordinate") + 
+  ylab("y coordinate")
 fourfoldplot(table(Predicted, Actual))
 ```
 
